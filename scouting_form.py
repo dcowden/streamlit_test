@@ -103,12 +103,10 @@ with match_form:
 
     submitted = st.form_submit_button("Submit", type="secondary", disabled=False, use_container_width=False)
     if submitted:
-        write_scouting_row(record)
+        write_scouting_row(st.secrets["gsheets"],record)
         st.text("Response Saved!")
 
 st.header("Data")
-df = get_match_data()
-#ss = df.groupby('team_number').sum()
-#st.dataframe(ss)
+df = get_match_data(st.secrets["gsheets"])
 st.write(df.dtypes)
 st.dataframe(df)

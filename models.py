@@ -2,8 +2,10 @@ from pydantic import BaseModel
 import gspread
 import pandas as pd
 from datetime import datetime
+from google.oauth2.service_account import Credentials
 
-CREDENTIAL_PATH="./google_sheet_creds.json"
+
+#CREDENTIAL_PATH="./google_sheet_creds.json"
 SHEET_ID='1JHUOVxvL_UDA3tqxTiwWO095eOxppAWJi7PtDnxnGt8'
 
 
@@ -63,15 +65,26 @@ class ScoutingRecord(BaseModel):
         return [ f.replace('_','.') for f in ScoutingRecord.__fields__.keys() ]
 
 
-def connect_sheet():
-    gs = gspread.service_account(CREDENTIAL_PATH)
+def connect_sheet(secrets):
+
+
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+    ]
+
+    credentials = Credentials.from_service_account_info(
+        secrets,
+        scopes=scopes,
+    )
+    gs = gspread.authorize(credentials)
     CHARLESTON_TAB = 0
     s = gs.open_by_key(SHEET_ID).get_worksheet(CHARLESTON_TAB)
     return s
 
-def get_match_data():
-    gs = connect_sheet()
+def get_match_data(secrets):
+    gs = connect_sheet(secrets)
     d = gs.get()
+
 
     columns_with_underscores = [ c.replace('.','_') for c in d[0]]
     print("Cols=",columns_with_underscores)
@@ -88,18 +101,18 @@ def get_match_data():
     return df
 
 
-def write_header_if_needed(sheet):
+def write_header_if_needed(secrets,sheet):
     a1 = sheet.cell(1,1)
 
     if a1.value is None:
         print("Writing Header!",ScoutingRecord.header_columns())
-        s = connect_sheet()
+        s = connect_sheet(secrets)
         s.append_row( ScoutingRecord.header_columns())
 
-def write_scouting_row(rec:ScoutingRecord):
+def write_scouting_row(secrets, rec:ScoutingRecord):
     rec.calc_fields()
-    s = connect_sheet()
-    write_header_if_needed(s)
+    s = connect_sheet(secrets)
+    write_header_if_needed(secrets,s)
     t = rec.as_tuple()
     print("Writing Record:",t)
     s.append_row(t)
